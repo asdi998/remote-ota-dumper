@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-GUI.pyw —— ZipPayloadExtractor 轻量图形界面（tkinter，仅标准库）。
+GUI.pyw —— Remote OTA Dumper 轻量图形界面（tkinter，仅标准库）。
 
 用法: 双击 GUI.pyw（或 pythonw GUI.pyw）运行，python GUI.pyw 可用于调试。
 
@@ -22,7 +22,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
-import ZipPayloadExtractor as zpe
+import remote_ota_dumper as zpe
 
 
 def _default_download_dir():
@@ -132,7 +132,7 @@ def format_ota_info(info):
 class ZipGUI:
     def __init__(self, root):
         self.root = root
-        root.title("ZipPayloadExtractor - OTA 分区提取")
+        root.title("Remote OTA Dumper - OTA 分区提取")
         root.geometry("800x680")
         root.minsize(720, 560)
 

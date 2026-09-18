@@ -1,4 +1,4 @@
-# ZipPayloadExtractor
+# Remote OTA Dumper
 
 从 Android OTA 升级包（ZIP 中的 `payload.bin`）快速提取分区镜像或文件的工具，
 支持本地文件与远程 HTTP(S) 链接，**无需完整下载整个包**。
@@ -29,7 +29,7 @@
 | 方式 | 适合谁 | 说明 |
 | --- | --- | --- |
 | 🖥️ **GUI**（图形界面） | 普通用户（Windows） | 输入链接或选择本地文件 → 查看 OTA 信息与分区列表 → 勾选分区一键下载，进度一目了然；下载中可继续勾选追加队列 |
-| ⌨️ **CLI**（命令行） | 脚本/服务器用户 | 一行命令提取指定分区或文件，`python ZipPayloadExtractor.py --help` 查看全部参数 |
+| ⌨️ **CLI**（命令行） | 脚本/服务器用户 | 一行命令提取指定分区或文件，`python remote_ota_dumper.py --help` 查看全部参数 |
 | 📦 **函数接口**（Python API） | 开发者 | 把提取能力集成进自己的程序 |
 
 三者共用同一个引擎，功能一致。
@@ -38,7 +38,7 @@
 
 ### 普通用户（Windows）
 
-在 **Releases 页面**下载 `ZipPayloadExtractorGUI.exe`（GUI 版，免安装、免 Python），
+在 **Releases 页面**下载 `RemoteOtaDumperGUI.exe`（GUI 版，免安装、免 Python），
 双击运行：
 
 1. 粘贴 OTA 链接（或点"选择本地文件..."）
@@ -60,15 +60,15 @@ pip install -r requirements.txt
 python GUI.pyw
 
 # 命令行：列出分区 / 提取分区 / 提取文件
-python ZipPayloadExtractor.py <链接或本地路径>
-python ZipPayloadExtractor.py <链接或本地路径> system
-python ZipPayloadExtractor.py <链接或本地路径> META-INF/com/android/metadata
+python remote_ota_dumper.py <链接或本地路径>
+python remote_ota_dumper.py <链接或本地路径> system
+python remote_ota_dumper.py <链接或本地路径> META-INF/com/android/metadata
 ```
 
 ### 函数接口（嵌入自己的程序）
 
 ```python
-import ZipPayloadExtractor as zpe
+import remote_ota_dumper as zpe
 
 # 列出分区 -> [{name, image_size, download_size}, ...]；无 payload.bin 返回 None
 parts = zpe.list_partitions("update.zip")
@@ -117,8 +117,8 @@ with zpe.ZipPayloadTool("https://example.com/update.zip", threads=16,
 ```bash
 py -3.13 -m nuitka --onefile --assume-yes-for-downloads --output-dir=build-nuitka \
   --include-package-data=certifi --enable-plugin=tk-inter --windows-console-mode=disable \
-  --product-name=ZipPayloadExtractor --product-version=3.3.1 \
-  --output-filename=ZipPayloadExtractorGUI.exe GUI.pyw
+  --product-name="Remote OTA Dumper" --product-version=3.3.1 \
+  --output-filename=RemoteOtaDumperGUI.exe GUI.pyw
 ```
 
 > 要求已安装 Nuitka 与 MSVC/zig 工具链；Nuitka 对 Python 3.14 仅为实验性支持，建议用 3.13。
@@ -126,7 +126,7 @@ py -3.13 -m nuitka --onefile --assume-yes-for-downloads --output-dir=build-nuitk
 ## 文件结构
 
 ```
-ZipPayloadExtractor.py    # 主程序（引擎 + CLI + 函数接口，单文件）
+remote_ota_dumper.py    # 主程序（引擎 + CLI + 函数接口，单文件）
 GUI.pyw                   # 图形界面（tkinter，仅标准库，无额外依赖）
 update_metadata_pb2.py    # update_metadata proto 的生成绑定（protobuf 5.27.2，请勿手改）
 requirements.txt
