@@ -100,6 +100,7 @@ CHUNK_SIZE = 1024 * 1024 * 4    # 普通文件分块下载的块大小（4MB）
 MAX_RETRIES = 6                 # 单次 Range 读取的应用层重试次数（CDN 断连场景）
 GROUP_READ_TRIES = 3            # 分区提取时一组数据的读取尝试次数（组级重试）
 DEFAULT_THREADS = 8             # 默认并发数（限速链接可调大，GUI/CLI 均可）
+USER_AGENT = "AndroidDownloadManager/17 (Linux; U; Android 17)"  # 下载 UA（模拟 Android 下载管理器）
 __version__ = "3.3.1"
 HEAD_SCAN_STEPS = (8 * 1024, 64 * 1024, 256 * 1024, 1024 * 1024, 4 * 1024 * 1024)  # 快速定位扩容窗口（8KB 起步）
 HEAD_SCAN_MAX = 4 * 1024 * 1024
@@ -251,6 +252,7 @@ class DataFetcher:
             session = requests.Session()
             session.mount("http://", adapter)
             session.mount("https://", adapter)
+            session.headers.update({"User-Agent": USER_AGENT})  # 所有请求统一 UA
             self._thread_local.session = session
         return session
 
@@ -1979,6 +1981,55 @@ def _build_parser():
     return parser
 
 
+# API 级别 -> Android 版本号（CLI 摘要展示用）
+_ANDROID_VER = {28: "9", 29: "10", 30: "11", 31: "12", 32: "12L",
+                33: "13", 34: "14", 35: "15", 36: "16", 37: "17"}
+
+
+def _format_ota_info(info):
+    """把 OTA 元数据字典格式化为一行摘要；无数据时返回提示文本。
+
+    字段与 GUI 信息栏一致：设备（厂商）、系统版本（API）、版本号、
+    安全补丁级别、构建时间、OTA 类型；缺失字段自动跳过。
+    """
+    if not info:
+        return "未找到 META-INF/com/android/metadata（部分包无此文件）"
+    items = []
+    device = info.get("pre-device", "")
+    if device:
+        build = info.get("post-build", "")
+        vendor = build.split("/", 1)[0] if "/" in build else ""
+        items.append(f"设备: {device}" + (f" ({vendor})" if vendor else ""))
+
+    sdk = info.get("post-sdk-level", "")
+    if sdk.isdigit():
+        ver = _ANDROID_VER.get(int(sdk))
+        if ver is None:
+            # 映射表未覆盖的新/老 API：回退取 post-build 的平台段（如 dada:16）
+            build = info.get("post-build", "")
+            ver = build.split(":", 1)[1].split("/", 1)[0] if ":" in build else "?"
+        items.append(f"系统: Android {ver} (API {sdk})")
+
+    if info.get("post-build-incremental"):
+        items.append(f"版本: {info['post-build-incremental']}")
+
+    if info.get("post-security-patch-level"):
+        items.append(f"安全补丁: {info['post-security-patch-level']}")
+
+    ts = info.get("post-timestamp", "")
+    if ts.isdigit():
+        try:
+            items.append("构建时间: "
+                         + time.strftime("%Y-%m-%d %H:%M", time.localtime(int(ts))))
+        except (OSError, ValueError, OverflowError):
+            pass
+
+    if info.get("ota-type"):
+        items.append(f"OTA 类型: {info['ota-type']}")
+
+    return " | ".join(items)
+
+
 def _make_progress_cb():
     def callback(current, total, speed, elapsed):
         ProgressUtils.print_progress(current, total, speed, elapsed)
@@ -2040,6 +2091,7 @@ def _run_cli(argv=None):
           f"{ProgressUtils.format_size(tool.file_size)})")
     if tool.metadata_warning:
         print(f"警告: {tool.metadata_warning}")
+    print(f"OTA: {_format_ota_info(tool.get_ota_info())}")
 
     try:
         if args.list or not args.name:
